@@ -9,6 +9,7 @@ nuisance files and only committing 'real' files with extensions.
 
 """
 import os
+import argparse
 import subprocess
 import time
 import threading
@@ -34,7 +35,7 @@ class DebouncedHandler(FileSystemEventHandler):
     def on_any_event(self, event: FileSystemEvent):
         path = event.src_path
         # Skip directories, git internals, ignored suffixes, hidden, or no-ext
-        if event.is_directory or '.git' in path:
+        if event.is_directory or '.git' in path or '.jj' in path:
             return
         name = os.path.basename(path)
         if name.startswith('.'):
@@ -82,6 +83,19 @@ class AutoCommitWorker:
         report = self.inspect_current_change()
         print(report)
 
+
+    def repo_is_valid(self):
+        jj_dir = os.path.join(self.repopath, '.jj')
+        return os.path.isdir(jj_dir)
+
+    def init_repo(self):
+        # ensures the repo is a valid Git/Jujutsu repo
+        result = subprocess.run([
+            'pixi', 'run', 'jj',
+            'git', 'init', '--colocate', # make a git-compatible jj repo
+        ], cwd=self.repopath, stdout=subprocess.PIPE)
+        print(result.stdout.decode("utf-8"))
+
     def inspect_current_change(self):
         result = subprocess.run([
             'pixi', 'run', 'jj', 'diff',
@@ -91,9 +105,18 @@ class AutoCommitWorker:
         return result.stdout.decode("utf-8")
 
 
-def main():
-    main = AutoCommitWorker("./demo")
+def main(repopath=None):
+    if repopath is None:
+        raise ValueError("Please provide a path to a test repo.")
+
+    main = AutoCommitWorker(repopath)
+    if not main.repo_is_valid():
+        main.init_repo()
+
     main.start_watching()
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("repo", help="Path to existing repository to watch.")
+    args = parser.parse_args()
+    main(args.repo)
