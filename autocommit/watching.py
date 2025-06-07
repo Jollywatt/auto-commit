@@ -63,6 +63,8 @@ class FileWatcher(FileSystemEventHandler):
         try:
             while True:
                 time.sleep(1)
+        except KeyboardInterrupt:
+            return
         finally:
             self.file_observer.stop()
             self.file_observer.join()
