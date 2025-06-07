@@ -66,9 +66,20 @@ class DebouncedCommitHandler(FileSystemEventHandler):
         # Stage and commit
         name = os.path.basename(event.src_path)
         subprocess.run(['git', 'add', '-A'], cwd=GIT_REPO)
+
+        diff_proc = subprocess.run(
+            ['git', 'diff', '--cached'], cwd=GIT_REPO,
+            stdout=subprocess.PIPE, text=True
+        )
+        diff_text = diff_proc.stdout
+
+        msg = self.generate_commit_message(diff_text)
         msg = f"Auto-commit: modified {name}"
         subprocess.run(['git', 'commit', '-m', msg], cwd=GIT_REPO)
         print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}")
+
+    def generate_commit_message(self, diff):
+        pass
 
 if __name__ == '__main__':
     observer = Observer()
