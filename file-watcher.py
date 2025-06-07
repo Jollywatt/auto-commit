@@ -1,21 +1,42 @@
 import time
+import threading # used for timers
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
+class DebouncedHandler(FileSystemEventHandler):
+    """
+    Watch for file changes, but wait for a warmdown priod
+    for things to settle before triggering the chance handler.
+    """
+    def __init__(self, warmdown=1.0):
+        self.warmdown = warmdown
+        self.timer = None
+        self.lock = threading.Lock()
 
-class MyEventHandler(FileSystemEventHandler):
-    def on_any_event(self, event: FileSystemEvent) -> None:
-        print(event)
+    def on_any_event(self, event: FileSystemEvent):
+        with self.lock:
+            if self.timer:
+                self.timer.cancel()
+                print("Reset timer...")
+            else:
+                print("Starting warmdown timer...")
+            self.timer = threading.Timer(self.warmdown, lambda: self.handle_change(event))
+            self.timer.start()
+
+    def handle_change(self, event):
+        self.timer = None
+        print("Change event triggered.")
 
 
-event_handler = MyEventHandler()
-observer = Observer()
-observer.schedule(event_handler, "demo", recursive=True)
-observer.start()
-try:
-    while True:
-        time.sleep(1)
-finally:
-    observer.stop()
-    observer.join()
+def main():
+    event_handler = DebouncedHandler(warmdown=2)
+    observer = Observer()
+    observer.schedule(event_handler, "demo", recursive=True)
+    observer.start()
+    try:
+        while True:
+            time.sleep(1)
+    finally:
+        observer.stop()
+        observer.join()
