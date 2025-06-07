@@ -9,4 +9,10 @@ class ActionDecider:
 		pass
 
 	def should_be_new_change(self, report):
+		"""
+		Decide whether now is a good time to commit and start a new change.
+		"""
+
+		if report['n_files_affected'] == 0: return False # no changs
+
 		return True
