@@ -2,6 +2,7 @@
 import os
 import time
 import threading
+from termcolor import cprint
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
@@ -13,7 +14,7 @@ class FileWatcher(FileSystemEventHandler):
     Watch for file changes, but wait for a cooldown priod
     for things to settle before triggering the change handler.
     """
-    def __init__(self, dir, callback, cooldown=1.0):
+    def __init__(self, dir, callback, cooldown=1):
         self.dir = dir # directory to watch
         self.callback = callback # to call after file event
         self.cooldown = cooldown # minimum delay after event before callback
@@ -22,6 +23,10 @@ class FileWatcher(FileSystemEventHandler):
         self.timer = None
         self.lock = threading.Lock()
         self.verbose = True
+
+    def info(self, message):
+        if self.verbose:
+            cprint(message, "dark_grey")
 
     def on_any_event(self, event: FileSystemEvent):
         path = event.src_path
@@ -38,21 +43,22 @@ class FileWatcher(FileSystemEventHandler):
         with self.lock:
             if self.timer:
                 self.timer.cancel()
-                if self.verbose: print("Restarted cooldown timer...")
+                self.info("Restarted cooldown timer...")
             else:
-                if self.verbose: print("Starting cooldown timer...")
+                self.info("Starting cooldown timer...")
             self.timer = threading.Timer(self.cooldown, self.handle_change)
             self.timer.start()
 
     def handle_change(self):
-        self.timer = None
-        if self.verbose: print("Change event triggered.")
+        self.info("Change event triggered.")
         self.callback()
+        self.timer = None
+        self.info("Finished handling; watching...")
 
     def start_watching(self):
         self.file_observer.schedule(self, self.dir, recursive=True)
         self.file_observer.start()
-        if self.verbose: print(f"Watching {self.dir!r}")
+        self.info(f"Watching {self.dir!r}")
 
         try:
             while True:
