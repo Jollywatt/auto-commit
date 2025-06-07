@@ -79,12 +79,16 @@ class AutoCommitWorker:
 
     def handle_change(self):
         # Stage and commit
-        name = "???"
-        # subprocess.run(['git', 'add', '-A'], cwd=GIT_REPO)
-        msg = f"Auto-commit: modified {name}"
-        # subprocess.run(['git', 'commit', '-m', msg], cwd=GIT_REPO)
-        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}")
+        report = self.inspect_current_change()
+        print(report)
 
+    def inspect_current_change(self):
+        result = subprocess.run([
+            'pixi', 'run', 'jj', 'diff',
+            '--repository', self.repopath,
+            '--summary',
+        ], stdout=subprocess.PIPE)
+        return result.stdout.decode("utf-8")
 
 
 def main():

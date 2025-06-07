@@ -10,3 +10,5 @@ version = "0.1.0"
 [dependencies]
 python = ">=3.13.3,<3.14"
 watchdog = ">=6.0.0,<7"
+jj = ">=0.30.0,<0.31"
+ipython = ">=9.3.0,<10"
