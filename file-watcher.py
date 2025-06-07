@@ -30,14 +30,25 @@ class DebouncedHandler(FileSystemEventHandler):
         if self.verbose: print("Change event triggered.")
 
 
+class AutoCommitWorker:
+    def __init__(self, repopath):
+        self.repopath = repopath
+        self.change_observer = Observer()
+        self.change_handler = DebouncedHandler()
+    
+    def start_watching():
+        self.change_observer.schedule(self.change_handler, self.repopath, recursive=True)
+        self.change_observer.start()
+
+        try:
+            while True:
+                time.sleep(1)
+        finally:
+            self.change_observer.stop()
+            self.change_observer.join()
+
+
+
 def main():
-    event_handler = DebouncedHandler(warmdown=2)
-    observer = Observer()
-    observer.schedule(event_handler, "demo", recursive=True)
-    observer.start()
-    try:
-        while True:
-            time.sleep(1)
-    finally:
-        observer.stop()
-        observer.join()
+    main = AutoCommitWorker("./demo")
+    main.start_watching()
