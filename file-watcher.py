@@ -15,23 +15,21 @@ import threading
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
-# Directory to watch (must be inside a Git repo)
-PATH_TO_WATCH = "/Users/ryanbarouki/Documents/Coding/test_auto_commit/"
-GIT_REPO = PATH_TO_WATCH
-
 # Filename suffixes to ignore (swap, backup, temp)
 IGNORE_SUFFIXES = ['.swp', '.swx', '~', '.tmp', '.temp']
 
-class DebouncedCommitHandler(FileSystemEventHandler):
+
+class DebouncedHandler(FileSystemEventHandler):
     """
-    Watch for file changes, but wait for a warmdown period
-    before staging and committing changes.
+    Watch for file changes, but wait for a warmdown priod
+    for things to settle before triggering the change handler.
     """
-    def __init__(self, warmdown=1.0):
+    def __init__(self, callback, warmdown=1.0):
         self.warmdown = warmdown
         self.timer = None
         self.lock = threading.Lock()
-        self.pending_event = None
+        self.verbose = True
+        self.callback = callback
 
     def on_any_event(self, event: FileSystemEvent):
         path = event.src_path
@@ -46,41 +44,52 @@ class DebouncedCommitHandler(FileSystemEventHandler):
         for suffix in IGNORE_SUFFIXES:
             if path.endswith(suffix):
                 return
-
+            
         with self.lock:
-            self.pending_event = event
             if self.timer:
                 self.timer.cancel()
-                print("Reset debounce timer...")
+                if self.verbose: print("Restarted warmdown timer...")
             else:
-                print("Starting debounce timer...")
-            self.timer = threading.Timer(self.warmdown, self.handle_change)
+                if self.verbose: print("Starting warmdown timer...")
+            self.timer = threading.Timer(self.warmdown, lambda: self.handle_change(event))
             self.timer.start()
 
-    def handle_change(self):
-        with self.lock:
-            event = self.pending_event
-            self.timer = None
-            self.pending_event = None
+    def handle_change(self, event):
+        self.timer = None
+        if self.verbose: print("Change event triggered.")
+        self.callback()
 
+
+class AutoCommitWorker:
+    def __init__(self, repopath):
+        self.repopath = repopath
+        self.change_observer = Observer()
+        self.change_handler = DebouncedHandler(self.handle_change)
+    
+    def start_watching(self):
+        self.change_observer.schedule(self.change_handler, self.repopath, recursive=True)
+        self.change_observer.start()
+
+        try:
+            while True:
+                time.sleep(1)
+        finally:
+            self.change_observer.stop()
+            self.change_observer.join()
+
+    def handle_change(self):
         # Stage and commit
-        name = os.path.basename(event.src_path)
-        subprocess.run(['git', 'add', '-A'], cwd=GIT_REPO)
+        name = "???"
+        # subprocess.run(['git', 'add', '-A'], cwd=GIT_REPO)
         msg = f"Auto-commit: modified {name}"
-        subprocess.run(['git', 'commit', '-m', msg], cwd=GIT_REPO)
+        # subprocess.run(['git', 'commit', '-m', msg], cwd=GIT_REPO)
         print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}")
 
-if __name__ == '__main__':
-    observer = Observer()
-    handler = DebouncedCommitHandler(warmdown=2.0)
-    observer.schedule(handler, path=PATH_TO_WATCH, recursive=True)
-    observer.start()
-    print(f"Watching {PATH_TO_WATCH}...")
 
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("Stopping watcher...")
-        observer.stop()
-    observer.join()
+
+def main():
+    main = AutoCommitWorker("./demo")
+    main.start_watching()
+
+if __name__ == '__main__':
+    main()
