@@ -138,7 +138,14 @@ class AutoCommitWorker:
             # Flatten to text
             text = parts[0]['content']['parts'][0]['text']
             return text
-
+            # print(parts)
+            # if parts and isinstance(parts[0], dict):
+            #     # For beta API: candidates -> [{"content": ...}]
+            #     text = parts[0].get('content') or parts[0].get('parts', [{}])[0].get('text')
+            # if not text:
+            #     return default_msg
+            # # Return first line as commit message
+            # return text.strip().split('\n')[0]
         except Exception as e:
             print(f"Gemini API error: {e}")
             return default_msg
