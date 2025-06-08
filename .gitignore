@@ -3,3 +3,4 @@ __pycache__/
 .pixi
 *.egg-info
 .env
+.commit_logs/
