@@ -62,6 +62,9 @@ class AutoCommitWorker:
         if 'commit_freq' in json:
             print("Applied user's commit freq pereference.")
             self.decider.commit_freq = json['commit_freq']
+        elif 'detail_level' in json:
+            print("Applied user's detail level pereference.")
+            self.decider.detail_level = json['detail_level']
         else:
             print("[WARNING]", json)
 
