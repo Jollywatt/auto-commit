@@ -12,14 +12,14 @@ class SessionLogger:
         # signal.signal(signal.SIGINT, self._on_exit)
 
     def _make_log_path(self):
-        logs_dir = os.path.join(self.repo_path, 'logs')
+        logs_dir = os.path.join(self.repo_path, '.commit_logs')
         os.makedirs(logs_dir, exist_ok=True)
 
         today = datetime.date.today().strftime("%d_%m_%Y")
         pattern = re.compile(rf"session_{today}-(\d+)\.log$")
         existing = [
             int(m.group(1))
-            for f in os.listdir(self.repo_path)
+            for f in os.listdir(logs_dir)
             if (m := pattern.match(f))
         ]
         inst = max(existing or [0]) + 1
