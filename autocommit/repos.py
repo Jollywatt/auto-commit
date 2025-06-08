@@ -51,7 +51,7 @@ class JujutsuHandler(VCSHandler):
     
     def init_repo(self):
         # create a git-compatible jj repo
-        print(self.run_jj_cmd(['git', 'init', '--colocate']))
+        print(self.run_cmd(['git', 'init', '--colocate']))
 
     def get_diff_summary(self):
         return self.run_cmd(['diff', '--summary'])
