@@ -15,6 +15,7 @@ import subprocess
 import time
 import threading
 import requests
+import argparse
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from dotenv import load_dotenv
@@ -43,10 +44,12 @@ class DebouncedHandler(FileSystemEventHandler):
     def on_any_event(self, event: FileSystemEvent):
         path = event.src_path
         # Skip directories, git internals, ignored suffixes, hidden, or no-ext
-        if event.is_directory or '.git' in path:
+        if event.is_directory or '.git' in path or '.jj' in path:
             return
         name = os.path.basename(path)
-        if name.startswith('.') or not os.path.splitext(name)[1]:
+        if name.startswith('.'):
+            return
+        if not os.path.splitext(name)[1]:
             return
         for suffix in IGNORE_SUFFIXES:
             if path.endswith(suffix):
@@ -59,7 +62,6 @@ class DebouncedHandler(FileSystemEventHandler):
             else:
                 if self.verbose: print("Starting debounce timer...")
             # Store last event path for commit message context
-            self.last_path = path
             self.timer = threading.Timer(self.warmdown, self._trigger)
             self.timer.start()
 
@@ -67,31 +69,28 @@ class DebouncedHandler(FileSystemEventHandler):
         self.timer = None
         if self.verbose: print("Debounce period over, triggering change handler.")
         # Call the provided callback with the path of last change
-        self.callback(self.last_path)
+        self.callback()
 
 class AutoCommitWorker:
-    """
-    Encapsulates the observer and commit logic, using a DebouncedHandler.
-    """
-    def __init__(self, repopath, warmdown=2.0):
+    def __init__(self, repopath, verbose=True):
         self.repopath = repopath
         self.observer = Observer()
-        self.handler = DebouncedHandler(callback=self.handle_change,
-                                        warmdown=warmdown)
+        self.handler = DebouncedHandler(callback=self.handle_change)
+        self.verbose = verbose
 
-    def start(self):
+    def start_watching(self):
         self.observer.schedule(self.handler, self.repopath, recursive=True)
         self.observer.start()
-        print(f"Watching {self.repopath} with debounce={self.handler.warmdown}s...")
+
         try:
             while True:
                 time.sleep(1)
-        except KeyboardInterrupt:
-            print("Stopping watcher...")
-            self.observer.stop()
-        self.observer.join()
+        finally:
+            if self.verbose: print("Stopping watcher...")
+            self.observer.stop() 
+            self.observer.join()
 
-    def handle_change(self, path):
+    def handle_change(self):
         # Stage changes
         subprocess.run(['git', 'add', '-A'], cwd=self.repopath, check=True)
         # Get staged diff
@@ -101,19 +100,18 @@ class AutoCommitWorker:
         )
         diff_text = diff_proc.stdout
         # Generate commit message
-        commit_msg = self.generate_commit_message(diff_text, path)
+        commit_msg = self.generate_commit_message(diff_text)
         # Commit
         subprocess.run(['git', 'commit', '-m', commit_msg], cwd=self.repopath, check=True)
         print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {commit_msg}")
 
 
-    def generate_commit_message(self, diff: str, path: str) -> str:
+    def generate_commit_message(self, diff: str) -> str:
         """
         Summarize the diff into a commit message via Gemini API (using Google Generative Language).
         Falls back to a default message if API unavailable or on error.
         """
-        filename = os.path.basename(path)
-        default_msg = f"Auto-commit: modified {filename}"
+        default_msg = f"Auto-commit: \n\n {self.inspect_current_change()}"
         if not GEMINI_API_KEY:
             return default_msg
         url = f"{GEMINI_API_URL}?key={GEMINI_API_KEY}"
@@ -138,23 +136,43 @@ class AutoCommitWorker:
             # Flatten to text
             text = parts[0]['content']['parts'][0]['text']
             return text
-            # print(parts)
-            # if parts and isinstance(parts[0], dict):
-            #     # For beta API: candidates -> [{"content": ...}]
-            #     text = parts[0].get('content') or parts[0].get('parts', [{}])[0].get('text')
-            # if not text:
-            #     return default_msg
-            # # Return first line as commit message
-            # return text.strip().split('\n')[0]
+
         except Exception as e:
             print(f"Gemini API error: {e}")
             return default_msg
 
-def main():
-    # Prompt for directory or use current
-    repo = '/Users/ryanbarouki/Documents/Coding/test_auto_commit/' or os.getcwd()
-    worker = AutoCommitWorker(repo)
-    worker.start()
+    def repo_is_valid(self):
+        jj_dir = os.path.join(self.repopath, '.jj')
+        return os.path.isdir(jj_dir)
+
+    def init_repo(self):
+        # ensures the repo is a valid Git/Jujutsu repo
+        result = subprocess.run([
+            'pixi', 'run', 'jj',
+            'git', 'init', '--colocate', # make a git-compatible jj repo
+        ], cwd=self.repopath, stdout=subprocess.PIPE)
+        if self.verbose: print(result.stdout.decode("utf-8"))
+
+    def inspect_current_change(self):
+        result = subprocess.run([
+            'pixi', 'run', 'jj', 'diff',
+            '--repository', self.repopath,
+            '--summary',
+        ], stdout=subprocess.PIPE)
+        return result.stdout.decode("utf-8")
+
+def main(repopath=None):
+    if repopath is None:
+        raise ValueError("Please provide a path to a test repo.")
+
+    main = AutoCommitWorker(repopath)
+    if not main.repo_is_valid():
+        main.init_repo()
+
+    main.start_watching()
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("repo", help="Path to existing repository to watch.")
+    args = parser.parse_args()
+    main(args.repo)
