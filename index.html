@@ -20,6 +20,9 @@
       height: calc(100vh - 200px);
       overflow-y: scroll;
     }
+    textarea {
+      width: 90%;
+    }
   </style>
 </head>
 <body>
@@ -30,7 +33,9 @@
     <details>
     <summary>Settings</summary>
     <p>How often should I make a new version?</p>
-    <textarea id="commit-freq"></textarea>
+    <textarea id="commit-freq" onchange="sendData({commit_freq: this.value})"></textarea>
+    <p>What level of detail should I include in the descriptions?</p>
+    <textarea id="detail-level" onchange="sendData({detail_level: this.value})"></textarea>
   </details>
   </p>
 
@@ -40,13 +45,22 @@
   <script>
     const ws = new WebSocket('ws://' + location.hostname + ':8765');
     ws.onmessage = function(event) {
-      let {path, log, commit_freq} = JSON.parse(event.data);
+      let {path, log, commit_freq, detail_level} = JSON.parse(event.data);
       document.getElementById('commit-freq').textContent = commit_freq;
+      document.getElementById('detail-level').textContent = detail_level;
       document.getElementById('path').textContent = path;
       document.getElementById('log').textContent = log;
     };
     ws.onopen = function() { console.log('WebSocket connected'); };
     ws.onclose = function() { document.getElementById('log').textContent = 'Disconnected from server.'; };
+    function sendData(obj) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(obj));
+      } else {
+        console.warn('WebSocket not open');
+      }
+    }
+    window.sendData = sendData;
   </script>
 </body>
 </html>

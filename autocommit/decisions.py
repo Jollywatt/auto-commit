@@ -12,7 +12,19 @@ load_dotenv()
 GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
+DEFAULT_COMMIT_FREQ = """\
+Don't commit if I only change a couple words.
+But do commit before I delete a file or a lot of words, so I can get it back!
+"""
+
+DEFAULT_DETAIL_LEVEL = """\
+Limit to one line or ten words.
+"""
+
 class ActionDecider:
+    commit_freq = DEFAULT_COMMIT_FREQ
+    detail_level = DEFAULT_DETAIL_LEVEL
+
     def __init__(self):
         pass
 
@@ -25,6 +37,7 @@ class ActionDecider:
         diff = report['gitdiff']
 
         prompt = f"""You are an automated reviewer whose sole job is to decide whether a set of changes is ready to be committed.
+        User's commit frequency preference: {self.commit_freq!r}
         OUTPUT:
         - ONLY output "yes" or "no".
         - Do not output any other text, comments, or punctuation.
@@ -74,9 +87,11 @@ class ActionDecider:
 
         prompt = f"You are a Git commit message assistant. Write a clear, concise,\
                 imperative commit message based on the following staged diff.\
-                Focus on what changed and don't try to guess the intention behind it, simply describe the change,\
-                use present-tense verbs, don't repeat yourself,\
-                and limit the message to one to ten lines. Diff: {gitdiff}"
+                Do not try to guess the user's intention.\
+                Just state what changed.\
+                Use present-tense verbs, don't repeat yourself.\
+                User's requested level of detail: {self.detail_level!r}\
+                Diff: {gitdiff}"
         try:
             return self.ask_gemini(prompt)
 

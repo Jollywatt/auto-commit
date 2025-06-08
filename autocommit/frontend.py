@@ -12,6 +12,7 @@ class FrontendData(BaseModel):
     path: str
     log: str
     commit_freq: str # prompt describing how often to commit
+    detail_level: str # prompt describing commit message style
 
 class FrontendServer:
     def __init__(self, host='localhost', port=8000, ws_port=8765):
@@ -21,6 +22,7 @@ class FrontendServer:
         self.clients = set()
         self.loop = asyncio.new_event_loop()
         self.onconnect = None
+        self.onmessgae = lambda json: None
 
     def start(self):
         # Start HTTP and WebSocket servers in background threads
@@ -44,11 +46,18 @@ class FrontendServer:
                 print(f"[FrontendServer] onconnect callback error: {e}")
         self.clients.add(websocket)
         try:
-            async for _ in websocket:
-                pass  # We don't expect messages from client
+            async for message in websocket:
+                try:
+                    import json
+                    data = json.loads(message)
+                    print(f"[FrontendServer] Received JSON from client: {data}")
+                    self.onmessgae(data)
+
+                except Exception as e:
+                    print(f"[FrontendServer] Error parsing client message: {e}")
         finally:
             self.clients.remove(websocket)
-
+    
     def _start_ws(self):
         asyncio.set_event_loop(self.loop)
         self.loop.run_until_complete(self._run_ws_server())

@@ -20,6 +20,7 @@ class AutoCommitWorker:
 
         self.frontend = FrontendServer()
         self.frontend.onconnect = lambda ws: self.send_log_to_frontend()
+        self.frontend.onmessgae = self.handle_message_from_frontend
         self.frontend.start()
 
     def inspect_current_change(self):
@@ -49,8 +50,20 @@ class AutoCommitWorker:
     def send_log_to_frontend(self):
         log = self.vcs.get_log()
 
-        data = FrontendData(path=self.repopath, log=log)
+        data = FrontendData(
+            path=self.repopath,
+            log=log,
+            commit_freq=self.decider.commit_freq,
+            detail_level=self.decider.detail_level,
+        )
         self.frontend.send_data(data)
+
+    def handle_message_from_frontend(self, json):
+        if 'commit_freq' in json:
+            print("Applied user's commit freq pereference.")
+            self.decider.commit_freq = json['commit_freq']
+        else:
+            print("[WARNING]", json)
 
 
 
