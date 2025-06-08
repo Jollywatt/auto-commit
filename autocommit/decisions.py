@@ -22,10 +22,21 @@ class ActionDecider:
         """
 
         if report['n_files_affected'] == 0: return False # no changs
-        prompt = f"You are responsible for deciding if it is time to make a commit.\
-            Take a look at the following git diff"
+        diff = report['gitdiff']
 
-        return True
+        prompt = f"""You are an automated reviewer whose sole job is to decide whether a set of changes is ready to be committed.
+        OUTPUT:
+        - ONLY output "yes" or "no".
+        - Do not output any other text, comments, or punctuation.
+        Here is the diff:
+        ```
+        {diff}
+        ```
+        """
+
+        decision = self.ask_gemini(prompt)
+        print(decision.lower(), "yes" in decision.lower())
+        return True if "yes" in decision.lower() else False
     
     def ask_gemini(self, prompt):
         url = f"{GEMINI_API_URL}?key={GEMINI_API_KEY}"
