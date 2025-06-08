@@ -11,7 +11,7 @@ class VCSHandler:
         result = subprocess.run(cmd, cwd=self.path, stdout=subprocess.PIPE)
         if result.returncode != 0:
             print("Error running", cmd)
-            print(result.stderr.decode("utf-8"))
+            print(result)
         return result.stdout.decode("utf-8")
 
 
