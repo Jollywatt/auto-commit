@@ -34,13 +34,17 @@ class FileWatcher(FileSystemEventHandler):
             return
 
         # DEBUG: show the one event we're actually handling
-        print(f"[DEBUG] Triggering event: {event.event_type} on {event.src_path}")
+        # print(f"[DEBUG] Triggering event: {event.event_type} on {event.src_path}")
 
         path = event.src_path
         name = os.path.basename(path)
 
         # existing skips…
-        if event.is_directory or '.git/' in path or '.jj/' in path or '__pycache__' in path or 'logs' in path:
+        if event.is_directory \
+           or '.git/' in path \
+           or '.jj/' in path \
+           or '__pycache__' in path \
+           or '.commit_logs/' in path:
             return
         if name.startswith('.'):
             return
