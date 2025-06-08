@@ -4,6 +4,7 @@ import argparse
 from watching import FileWatcher
 from decisions import ActionDecider
 from repos import GitHandler
+from logfile import SessionLogger
 
 
 class AutoCommitWorker:
@@ -12,6 +13,7 @@ class AutoCommitWorker:
         self.watcher = FileWatcher(self.repopath, self.handle_change)
         self.decider = ActionDecider()
         self.vcs = GitHandler(self.repopath)
+        self.logger = SessionLogger(self.repopath)
         
         if not self.vcs.repo_is_valid():
             self.vcs.init_repo()
@@ -41,8 +43,7 @@ class AutoCommitWorker:
             print(f"Description from Gemini:\n{desc}\n~")
             self.vcs.commit(message=desc)
 
-
-
+            self.logger.log_change(desc)
 
 
 if __name__ == "__main__":
