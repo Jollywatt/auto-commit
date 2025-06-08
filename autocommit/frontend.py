@@ -3,6 +3,8 @@ import socketserver
 import threading
 import asyncio
 import websockets
+import webbrowser
+import time
 
 from pydantic import BaseModel
 
@@ -22,6 +24,8 @@ class FrontendServer:
     def start(self):
         # Start HTTP and WebSocket servers in background threads
         threading.Thread(target=self._start_http, daemon=True).start()
+        time.sleep(1)
+        webbrowser.open(f"http://{self.host}:{self.port}")
         threading.Thread(target=self._start_ws, daemon=True).start()
 
     def _start_http(self):
