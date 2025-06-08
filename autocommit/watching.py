@@ -32,10 +32,7 @@ class FileWatcher(FileSystemEventHandler):
         # 1) only pay attention to real writes/creates
         if event.event_type not in ('created', 'modified'):
             return
-
-        # DEBUG: show the one event we're actually handling
-        print(f"[DEBUG] Triggering event: {event.event_type} on {event.src_path}")
-
+        
         path = event.src_path
         name = os.path.basename(path)
 
@@ -49,6 +46,8 @@ class FileWatcher(FileSystemEventHandler):
         for suffix in IGNORE_SUFFIXES:
             if path.endswith(suffix):
                 return
+
+        self.info(f"Triggered by: {event.event_type} on {event.src_path}")
 
         # start cooldown…
         with self.lock:
