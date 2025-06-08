@@ -4,6 +4,7 @@ from decisions import ActionDecider
 from repos import GitHandler, JujutsuHandler
 from logfile import SessionLogger
 from frontend import FrontendServer, FrontendData
+import os
 
 
 class AutoCommitWorker:
@@ -42,6 +43,12 @@ class AutoCommitWorker:
         report = self.inspect_current_change()
         if self.decider.should_be_new_change(report):
             desc = self.decider.describe_change(report)
+            title = "Committed!"
+            message = f"{desc}"
+            command = f'''
+            osascript -e 'display notification "{message}" with title "{title}"'
+            '''
+            os.system(command)
             print(f"Description from Gemini:\n{desc}\n~")
             self.vcs.commit(message=desc)
             # self.logger.log_change(desc)
