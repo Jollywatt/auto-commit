@@ -1,5 +1,5 @@
 If you run 
 ```
-python file-watcher.py
+python main.py path/to/folder
 ```
-it will watch for changes and print something.
+it will watch for changes in the given folder (initialising it as a repo if necessary).
