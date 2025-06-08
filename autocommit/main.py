@@ -51,7 +51,7 @@ class AutoCommitWorker:
             os.system(command)
             print(f"Description from Gemini:\n{desc}\n~")
             self.vcs.commit(message=desc)
-            # self.logger.log_change(desc)
+            self.logger.log_change(desc)
             self.send_log_to_frontend()
 
     def send_log_to_frontend(self):
