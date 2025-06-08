@@ -14,7 +14,7 @@ class FileWatcher(FileSystemEventHandler):
     Watch for file changes, but wait for a cooldown priod
     for things to settle before triggering the change handler.
     """
-    def __init__(self, dir, callback, cooldown=1):
+    def __init__(self, dir, callback, cooldown=5):
         self.dir = dir # directory to watch
         self.callback = callback # to call after file event
         self.cooldown = cooldown # minimum delay after event before callback
