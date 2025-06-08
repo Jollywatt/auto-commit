@@ -3,21 +3,21 @@ import subprocess
 import argparse
 from watching import FileWatcher
 from decisions import ActionDecider
-from repos import GitHandler
+from repos import GitHandler, JujutsuHandler
 from logfile import SessionLogger
 
 
 class AutoCommitWorker:
-    def __init__(self, repopath):
+    def __init__(self, repopath, backend='git'):
         self.repopath = repopath
         self.watcher = FileWatcher(self.repopath, self.handle_change)
         self.decider = ActionDecider()
-        self.vcs = GitHandler(self.repopath)
         self.logger = SessionLogger(self.repopath)
-        
+
+        Vcs = {'git': GitHandler, 'jj': JujutsuHandler}[backend]
+        self.vcs = Vcs(self.repopath)
         if not self.vcs.repo_is_valid():
             self.vcs.init_repo()
-
 
     def inspect_current_change(self):
         summary = self.vcs.get_diff_summary()
@@ -49,7 +49,8 @@ class AutoCommitWorker:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("repo", help="Path to existing repository to watch.")
+    parser.add_argument("--use-jj", action="store_true", help="Use jj instead of git for version control.")
     args = parser.parse_args()
 
-    main = AutoCommitWorker(args.repo)
+    main = AutoCommitWorker(args.repo, backend='jj' if args.use_jj else 'git')
     main.start_watching()
