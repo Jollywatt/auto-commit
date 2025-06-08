@@ -7,7 +7,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
 # Filename suffixes to ignore (swap, backup, temp)
-IGNORE_SUFFIXES = ['.swp', '.swx', '~', '.tmp', '.temp']
+IGNORE_SUFFIXES = ['.swp', '.swx', '~', '.tmp', '.temp', '.pyc']
 
 class FileWatcher(FileSystemEventHandler):
     """
@@ -29,25 +29,37 @@ class FileWatcher(FileSystemEventHandler):
             cprint(message, "dark_grey")
 
     def on_any_event(self, event: FileSystemEvent):
+        # 1) only pay attention to real writes/creates
+        if event.event_type not in ('created', 'modified'):
+            return
+
+        # DEBUG: show the one event we're actually handling
+        print(f"[DEBUG] Triggering event: {event.event_type} on {event.src_path}")
+
         path = event.src_path
         name = os.path.basename(path)
 
-        # skip directories, git internals, ignored suffixes, hidden, or no-ext
-        if event.is_directory or '.git/' in path or '.jj/' in path: return
-        if name.startswith('.'): return
-        if not os.path.splitext(name)[1]: return
+        # existing skips…
+        if event.is_directory or '.git/' in path or '.jj/' in path or '__pycache__' in path:
+            return
+        if name.startswith('.'):
+            return
+        if not os.path.splitext(name)[1]:
+            return
         for suffix in IGNORE_SUFFIXES:
-            if path.endswith(suffix): return
-        
-        # start cooldown timer
+            if path.endswith(suffix):
+                return
+
+        # start cooldown…
         with self.lock:
             if self.timer:
                 self.timer.cancel()
-                self.info("Restarted cooldown timer...")
+                self.info("Restarted cooldown timer…")
             else:
-                self.info("Starting cooldown timer...")
+                self.info("Starting cooldown timer…")
             self.timer = threading.Timer(self.cooldown, self.handle_change)
             self.timer.start()
+
 
     def handle_change(self):
         self.info("Change event triggered.")

@@ -2,7 +2,7 @@
 authors = ["jollywatt <jo.alex.w@gmail.com>"]
 channels = ["conda-forge"]
 name = "auto-commit"
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
