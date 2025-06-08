@@ -5,11 +5,38 @@ class SessionLogger:
     def __init__(self, repo_path, verbose=True):
         self.repo_path = repo_path
         self.verbose = verbose
+
+        self._ensure_gitignore()
+
         self.log_path = self._make_log_path()
         open(self.log_path, 'w').close()
         if self.verbose:
             print(f"[INFO] Logging session to {self.log_path!r}")
         # signal.signal(signal.SIGINT, self._on_exit)
+
+    def _ensure_gitignore(self):
+        gitignore = os.path.join(self.repo_path, '.gitignore')
+        entry   = '.commit_logs/\n'
+
+        # If .gitignore doesn’t exist, create it with our line
+        if not os.path.exists(gitignore):
+            with open(gitignore, 'w') as f:
+                f.write(entry)
+            if self.verbose:
+                print(f"[INFO] Created .gitignore with: {entry.strip()}")
+            return
+
+        # Otherwise, read and only append if missing
+        with open(gitignore, 'r+') as f:
+            lines = f.readlines()
+            if any(line.strip() == entry.strip() for line in lines):
+                return
+            # not found → append
+            if not lines or not lines[-1].endswith('\n'):
+                f.write('\n')
+            f.write(entry)
+        if self.verbose:
+            print(f"[INFO] Appended to .gitignore: {entry.strip()}")
 
     def _make_log_path(self):
         logs_dir = os.path.join(self.repo_path, '.commit_logs')
