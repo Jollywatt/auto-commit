@@ -33,8 +33,10 @@ class FrontendServer:
 
     def _start_http(self):
         handler = http.server.SimpleHTTPRequestHandler
-        socketserver.TCPServer.allow_reuse_address = True
-        httpd = socketserver.TCPServer((self.host, self.port), handler)
+        # Always close the socket on shutdown and allow address reuse
+        class ReusableTCPServer(socketserver.TCPServer):
+            allow_reuse_address = True
+        httpd = ReusableTCPServer((self.host, self.port), handler)
         print(f"Serving HTTP on http://{self.host}:{self.port}")
         httpd.serve_forever()
 
