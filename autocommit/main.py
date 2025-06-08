@@ -3,7 +3,7 @@ from watching import FileWatcher
 from decisions import ActionDecider
 from repos import GitHandler, JujutsuHandler
 from logfile import SessionLogger
-from frontend import FrontendServer
+from frontend import FrontendServer, FrontendData
 
 
 class AutoCommitWorker:
@@ -48,7 +48,9 @@ class AutoCommitWorker:
 
     def send_log_to_frontend(self):
         log = self.vcs.get_log()
-        self.frontend.send_data(log)
+
+        data = FrontendData(path=self.repopath, log=log)
+        self.frontend.send_data(data)
 
 
 

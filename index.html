@@ -2,16 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AutoCommit Git Log</title>
-  <style>body { font-family: monospace; background: #222; color: #eee; } pre { background: #111; padding: 1em; border-radius: 8px; }</style>
+  <title>Folder history</title>
+  <style>
+    html {
+      font-family: sans-serif;
+      background: #a1e5ee;
+      color: #014469;
+    }
+    pre {
+      margin: 0;
+      padding: 1em;
+    }
+    #console {
+      background: #ffffff;
+      border-radius: 15px;
+      padding: 0;
+      height: calc(100vh - 200px);
+      overflow-y: scroll;
+    }
+  </style>
 </head>
 <body>
-  <h2>AutoCommit Git Log</h2>
-  <pre id="log">Loading...</pre>
+  <h2>Work history</h2>
+  <p>Watching folder <code id="path"></code></p>
+  <div id="console">
+    <pre id="log">Loading...</pre>
+  </div>
   <script>
     const ws = new WebSocket('ws://' + location.hostname + ':8765');
     ws.onmessage = function(event) {
-      document.getElementById('log').textContent = event.data;
+      let {path, log} = JSON.parse(event.data);
+      document.getElementById('path').textContent = path;
+      document.getElementById('log').textContent = log;
     };
     ws.onopen = function() { console.log('WebSocket connected'); };
     ws.onclose = function() { document.getElementById('log').textContent = 'Disconnected from server.'; };

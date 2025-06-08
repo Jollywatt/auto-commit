@@ -3,8 +3,12 @@ import socketserver
 import threading
 import asyncio
 import websockets
-import os
-from pathlib import Path
+
+from pydantic import BaseModel
+
+class FrontendData(BaseModel):
+    path: str
+    log: str
 
 class FrontendServer:
     def __init__(self, host='localhost', port=8000, ws_port=8765):
@@ -22,8 +26,8 @@ class FrontendServer:
 
     def _start_http(self):
         handler = http.server.SimpleHTTPRequestHandler
+        socketserver.TCPServer.allow_reuse_address = True
         httpd = socketserver.TCPServer((self.host, self.port), handler)
-        httpd.allow_reuse_address = True
         print(f"Serving HTTP on http://{self.host}:{self.port}")
         httpd.serve_forever()
 
@@ -49,10 +53,11 @@ class FrontendServer:
             print(f"Serving WebSocket on ws://{self.host}:{self.ws_port}")
             await asyncio.Future()  # run forever
 
-    def send_data(self, data):
+    def send_data(self, data: FrontendData):
         # Broadcast data to all connected websocket clients
+        json = data.model_dump_json()
         async def _broadcast():
             if self.clients:
-                await asyncio.gather(*(client.send(data) for client in self.clients), return_exceptions=True)
+                await asyncio.gather(*(client.send(json) for client in self.clients), return_exceptions=True)
         if self.loop.is_running():
             asyncio.run_coroutine_threadsafe(_broadcast(), self.loop)

@@ -40,7 +40,7 @@ class GitHandler(VCSHandler):
 
 class JujutsuHandler(VCSHandler):
     basecmd = [
-        'pixi', 'run', 'git',
+        'pixi', 'run', 'jj',
         '--config', 'user.name=autocommit',
         '--config', 'user.email=autocommit'
     ]
@@ -58,3 +58,14 @@ class JujutsuHandler(VCSHandler):
 
     def get_diff_details(self):
         return self.run_cmd(['diff', '--git'])
+    
+    def get_log(self):
+        return self.run_cmd([
+            'log',
+            '--revisions', 'all() ~ @',
+            '--template', 'separate("\n", author.timestamp().ago() ++ " ⋅ " ++ author.timestamp().format("%c") ++ "\n", description) ++ "\n\n"'
+        ])
+
+    def commit(self, message):
+        self.run_cmd(['describe', '--message', message])
+        self.run_cmd('new')
