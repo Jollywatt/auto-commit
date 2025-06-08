@@ -25,13 +25,23 @@
 <body>
   <h2>Work history</h2>
   <p>Watching folder <code id="path"></code></p>
+  
+  <p>
+    <details>
+    <summary>Settings</summary>
+    <p>How often should I make a new version?</p>
+    <textarea id="commit-freq"></textarea>
+  </details>
+  </p>
+
   <div id="console">
     <pre id="log">Loading...</pre>
   </div>
   <script>
     const ws = new WebSocket('ws://' + location.hostname + ':8765');
     ws.onmessage = function(event) {
-      let {path, log} = JSON.parse(event.data);
+      let {path, log, commit_freq} = JSON.parse(event.data);
+      document.getElementById('commit-freq').textContent = commit_freq;
       document.getElementById('path').textContent = path;
       document.getElementById('log').textContent = log;
     };

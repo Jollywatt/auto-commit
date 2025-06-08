@@ -11,6 +11,7 @@ from pydantic import BaseModel
 class FrontendData(BaseModel):
     path: str
     log: str
+    commit_freq: str # prompt describing how often to commit
 
 class FrontendServer:
     def __init__(self, host='localhost', port=8000, ws_port=8765):
