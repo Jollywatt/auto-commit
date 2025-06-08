@@ -1,10 +1,9 @@
-import os
-import subprocess
 import argparse
 from watching import FileWatcher
 from decisions import ActionDecider
 from repos import GitHandler, JujutsuHandler
 from logfile import SessionLogger
+from frontend import FrontendServer
 
 
 class AutoCommitWorker:
@@ -18,6 +17,10 @@ class AutoCommitWorker:
         self.vcs = Vcs(self.repopath)
         if not self.vcs.repo_is_valid():
             self.vcs.init_repo()
+
+        self.frontend = FrontendServer()
+        self.frontend.onconnect = lambda ws: self.send_log_to_frontend()
+        self.frontend.start()
 
     def inspect_current_change(self):
         summary = self.vcs.get_diff_summary()
@@ -36,14 +39,17 @@ class AutoCommitWorker:
     def handle_change(self):
         # Stage and commit
         report = self.inspect_current_change()
-        
         if self.decider.should_be_new_change(report):
             desc = self.decider.describe_change(report)
-
             print(f"Description from Gemini:\n{desc}\n~")
             self.vcs.commit(message=desc)
+            # self.logger.log_change(desc)
+            self.send_log_to_frontend()
 
-            self.logger.log_change(desc)
+    def send_log_to_frontend(self):
+        log = self.vcs.get_log()
+        self.frontend.send_data(log)
+
 
 
 if __name__ == "__main__":

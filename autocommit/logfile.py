@@ -9,7 +9,7 @@ class SessionLogger:
         open(self.log_path, 'w').close()
         if self.verbose:
             print(f"[INFO] Logging session to {self.log_path!r}")
-        signal.signal(signal.SIGINT, self._on_exit)
+        # signal.signal(signal.SIGINT, self._on_exit)
 
     def _make_log_path(self):
         logs_dir = os.path.join(self.repo_path, 'logs')

@@ -30,6 +30,9 @@ class GitHandler(VCSHandler):
 
     def get_diff_details(self):
         return self.run_cmd('diff')
+    
+    def get_log(self):
+        return self.run_cmd('log')
 
     def commit(self, message):
         self.run_cmd(['add', '-A'])

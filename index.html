@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AutoCommit Git Log</title>
+  <style>body { font-family: monospace; background: #222; color: #eee; } pre { background: #111; padding: 1em; border-radius: 8px; }</style>
+</head>
+<body>
+  <h2>AutoCommit Git Log</h2>
+  <pre id="log">Loading...</pre>
+  <script>
+    const ws = new WebSocket('ws://' + location.hostname + ':8765');
+    ws.onmessage = function(event) {
+      document.getElementById('log').textContent = event.data;
+    };
+    ws.onopen = function() { console.log('WebSocket connected'); };
+    ws.onclose = function() { document.getElementById('log').textContent = 'Disconnected from server.'; };
+  </script>
+</body>
+</html>
