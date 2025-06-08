@@ -5,15 +5,18 @@ class VCSHandler:
     def __init__(self, path):
         self.path = path
 
-class GitHandler(VCSHandler):
-    def run_cmd(self, args: list[str] | str):
+    def run_cmd(self, args):
         if type(args) is str: args = [args]
-        cmd = ['git', *args]
+        cmd = [*self.basecmd, *args]
         result = subprocess.run(cmd, cwd=self.path, stdout=subprocess.PIPE)
-        print(f"run: {cmd}")
-        if result.stderr:
-            print("Error:", result.stderr.decode("utf-8"))
+        if result.returncode != 0:
+            print("Error running", cmd)
+            print(result.stderr.decode("utf-8"))
         return result.stdout.decode("utf-8")
+
+
+class GitHandler(VCSHandler):
+    basecmd = ['git']
 
     def repo_is_valid(self):
         git_dir = os.path.join(self.path, '.git')
@@ -33,19 +36,11 @@ class GitHandler(VCSHandler):
         self.run_cmd(['commit', '--message', message])
 
 class JujutsuHandler(VCSHandler):
-    def run_cmd(self, args: list[str] | str):
-        if type(args) is str: args = [args]
-        result = subprocess.run(
-            # run a jujutsu command using the jj binary in the virtual env
-            ['pixi', 'run', 'git',
-             '--config', 'user.name=autocommit',
-             '--config', 'user.email=dummy@autocommit.org',
-             *args],
-            cwd=self.path,
-            stdout=subprocess.PIPE,
-        )
-        print(f"run: jj {' '.join(args)}")
-        return result.stdout.decode("utf-8")
+    basecmd = [
+        'pixi', 'run', 'git',
+        '--config', 'user.name=autocommit',
+        '--config', 'user.email=autocommit'
+    ]
 
     def repo_is_valid(self):
         jj_dir = os.path.join(self.path, '.jj')
